@@ -69,7 +69,7 @@ if [[ -z "$GENOME" || -z "$VERSION" ]]; then
 fi
 
 # ---------------------- Paths ----------------------
-SOURCE="$(dirname "$OUTDIR")/$(basename "$OUTDIR")_sources"
+SOURCE="$(dirname "$OUTDIR")/sources"
 BUILD="$OUTDIR"
 mkdir -p "$SOURCE" "$BUILD"
 
@@ -92,6 +92,12 @@ fi
 # ---------------------- Download ----------------------
 [[ -f "$FASTA_IN" ]] || { log "Downloading FASTA..."; curl -sSL "$FASTA_URL" | gunzip -c > "$FASTA_IN"; }
 [[ -f "$GTF_IN" ]]   || { log "Downloading GTF..."; curl -sSL "$GTF_URL" | gunzip -c > "$GTF_IN"; }
+
+# Use samtools to index the fasta file, if samtools is installed
+if command -v samtools &> /dev/null; then
+  log "Indexing FASTA file with samtools..."
+  samtools faidx "$FASTA_IN"
+fi
 
 # ---------------------- GTF Filtering (Optional) ----------------------
 TOOL_NAME=$(basename "$TOOL")

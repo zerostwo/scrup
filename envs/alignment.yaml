@@ -1,0 +1,11 @@
+name: alignment
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+channel_priority: strict
+dependencies:
+  - star =2.7.11b
+  - samtools =1.22
+  - seqtk =1.5
+  - pigz =2.8

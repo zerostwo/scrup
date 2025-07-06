@@ -1,0 +1,12 @@
+name: download
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+channel_priority: strict
+dependencies:
+  - python =3.12
+  - sra-tools =3.2.1
+  - pigz =2.8
+  - pbzip2 =1.1.13
+  - pysradb =2.2.2

@@ -1,0 +1,17 @@
+samples: "config/samples.txt"
+
+outdir: "results"
+
+download:
+  threads: 8           # Number of threads to use for fasterq-dump and pigz
+  tmpdir: "/dev/shm"   # Temporary directory to use for fasterq-dump and pigz
+
+reference:
+  genome: "GRCh38"
+  version: "48"
+  tool: "STAR"
+  threads: 8          # Number of threads to use for STAR or cellranger build
+
+alignment:
+  threads: 8           # Number of threads to use for STAR or cellranger alignment
+  memory: "64G"        # Memory to use for STAR or cellranger alignment

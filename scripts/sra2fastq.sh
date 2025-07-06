@@ -4,21 +4,22 @@ set -euo pipefail
 # ---------------------- Default Parameters ----------------------
 THREADS=8
 OUTDIR="./"
-TMPROOT="/dev/shm"
+TMPROOT=""
+USER_SET_TMPDIR=false
 INPUT=""
 RENAME=false
 
 usage() {
   echo "Usage: $0 -i <ACCESSION | FILE> [-t THREADS] [-o OUTDIR] [-d TMPDIR]"
-  echo "  -i, --input     Accession ID (SRP/SRX/SRS/SRR) or file with one per line"
-  echo "  -t, --threads   Threads to use (default: 8)"
-  echo "  -o, --outdir    Output directory (default: ./sra2fastq)"
-  echo "  -d, --tmpdir    Temporary directory (default: /dev/shm)"
-  echo "  -r, --rename    Rename output files to SRX_<number>.fastq.gz (default: false)"
-  echo "  --prefetch      Prefetch command (default: prefetch)"
-  echo "  --fasterq-dump  Fasterq-dump command (default: fasterq-dump)"
-  echo "  --pigz          Pigz command (default: pigz)"
-  echo "  --help          Show this help message"
+  echo "  -i, --input         Accession ID (SRP/SRX/SRS/SRR) or file with one per line"
+  echo "  -t, --threads       Threads to use (default: 8)"
+  echo "  -o, --outdir        Output directory (default: ./)"
+  echo "  -d, --tmpdir        Temporary directory (default: OUTDIR)"
+  echo "  -r, --rename        Rename output files to SRX_<role>.fastq.gz (default: false)"
+  echo "  --prefetch          Prefetch command (default: prefetch)"
+  echo "  --fasterq-dump      Fasterq-dump command (default: fasterq-dump)"
+  echo "  --pigz              Pigz command (default: pigz)"
+  echo "  --help              Show this help message"
   exit 1
 }
 
@@ -28,8 +29,8 @@ while [[ $# -gt 0 ]]; do
     -i|--input) INPUT="$2"; shift 2 ;;
     -t|--threads) THREADS="$2"; shift 2 ;;
     -o|--outdir) OUTDIR="$2"; shift 2 ;;
-    -d|--tmpdir) TMPROOT="$2"; shift 2 ;;
-    -r|--rename) RENAME=true; shift 1 ;;
+    -d|--tmpdir) TMPROOT="$2"; USER_SET_TMPDIR=true; shift 2 ;;
+    -r|--rename) RENAME=true; shift ;;
     --prefetch) PREFETCH="$2"; shift 2 ;;
     --fasterq-dump) FASTERQ_DUMP="$2"; shift 2 ;;
     --pigz) PIGZ="$2"; shift 2 ;;
@@ -44,9 +45,12 @@ done
 mkdir -p "$OUTDIR"
 SUCCESS_LOG="$OUTDIR/success.log"
 FAIL_LOG="$OUTDIR/fail.log"
-
-# : > "$SUCCESS_LOG"
-# : > "$FAIL_LOG"
+if [[ ! -f "$SUCCESS_LOG" ]]; then
+  : > "$SUCCESS_LOG"
+fi
+if [[ ! -f "$FAIL_LOG" ]]; then
+  : > "$FAIL_LOG"
+fi
 
 PREFETCH=${PREFETCH:-prefetch}
 FASTERQ_DUMP=${FASTERQ_DUMP:-fasterq-dump}
@@ -83,19 +87,26 @@ resolve_to_srr() {
   fi
 }
 
+
 # ---------------------- Core Processing Functions ----------------------
 process_one_srr() {
   local run=$1
-  local tmp="$TMPROOT/$run"
+  local tmp
+
+  if [[ "$USER_SET_TMPDIR" == true ]]; then
+    tmp="${TMPROOT}/${run}"
+  else
+    tmp="${OUTDIR}/${run}"
+  fi
 
   if ls "$OUTDIR/${run}"_*.fastq.gz &>/dev/null; then
     log "$run outputs exist — skipping"
-    return
+    return 0
   fi
 
   mkdir -p "$tmp"
   log "[$run] Downloading with prefetch..."
-  "$PREFETCH" --max-size u --progress --output-directory "$TMPROOT" "$run"
+  "$PREFETCH" --max-size u --progress --output-file "$tmp/${run}.sra" "$run"
 
   local sra="$tmp/${run}.sra"
   [[ ! -f "$sra" ]] && { log "[$run] SRA file not found"; return 1; }
@@ -210,24 +221,6 @@ summarize_fastq() {
   log "[$srx] Summary + role annotation complete"
 }
 
-process_accession() {
-  local acc="$1"
-  if [[ "$acc" =~ ^SRR ]]; then
-    process_one_srr "$acc"
-    summarize_fastq "$acc"
-  else
-    local srxs=($(resolve_to_srx "$acc"))
-    for srx in "${srxs[@]}"; do
-      local srrs=($(resolve_to_srr "$srx"))
-      for srr in "${srrs[@]}"; do
-        process_one_srr "$srr"
-      done
-      merge_by_srx "$srx"
-      summarize_fastq "$srx"
-    done
-  fi
-}
-
 rename_by_role() {
   local srx="$1"
   local summary="$OUTDIR/${srx}.fastq_summary.csv"
@@ -245,6 +238,24 @@ rename_by_role() {
   ' "$summary" | (cd "$OUTDIR" && bash)
 
   log "[$srx] Rename complete"
+}
+
+process_accession() {
+  local acc="$1"
+  if [[ "$acc" =~ ^SRR ]]; then
+    process_one_srr "$acc"
+    summarize_fastq "$acc"
+  else
+    local srxs=($(resolve_to_srx "$acc"))
+    for srx in "${srxs[@]}"; do
+      local srrs=($(resolve_to_srr "$srx"))
+      for srr in "${srrs[@]}"; do
+        process_one_srr "$srr"
+      done
+      merge_by_srx "$srx"
+      summarize_fastq "$srx"
+    done
+  fi
 }
 
 process_accession_with_status() {
