@@ -11,10 +11,9 @@ rule build_reference:
     log:
         stdout = f"{OUTDIR}/logs/build_reference/{GENOME}_v{VERSION}_{TOOL}.stdout.log",
         stderr = f"{OUTDIR}/logs/build_reference/{GENOME}_v{VERSION}_{TOOL}.stderr.log"
-    benchmark: f"{OUTDIR}/benchmarks/build_reference/{GENOME}_v{VERSION}_{TOOL}.benchmark.log"
     shell:
         """
-        bash scripts/build_reference.sh \
+        bash ../scripts/build_reference.sh \
             --genome {params.genome} \
             --version {params.version} \
             --tool {params.tool} \

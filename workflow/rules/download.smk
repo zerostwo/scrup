@@ -15,7 +15,7 @@ rule sra2fastq:
     benchmark: f"{OUTDIR}/benchmarks/sra2fastq/{{sample}}.benchmark.log"
     shell:
         """
-        bash scripts/sra2fastq.sh \
+        bash ../scripts/sra2fastq.sh \
             --input {wildcards.sample} \
             --threads {threads} \
             --outdir {params.outdir} \

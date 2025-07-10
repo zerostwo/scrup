@@ -1,0 +1,10 @@
+cores: 8
+use-conda: true
+# rerun-triggers: mtime
+printshellcmds: true
+keep-going: true
+latency-wait: 10
+resources:
+    download_slots: 1
+
+# report: results/report.html

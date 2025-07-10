@@ -1,0 +1,70 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+description: Schema for scRNA-seq Snakemake pipeline configuration
+
+type: object
+
+properties:
+  samples:
+    type: string
+    description: Path to the sample list text file (one sample ID per line)
+
+  outdir:
+    type: string
+    description: Root output directory for pipeline results
+
+  download:
+    type: object
+    description: Download configuration
+    properties:
+      threads:
+        type: integer
+        minimum: 1
+        description: Number of threads for fasterq-dump and pigz
+      tmpdir:
+        type: string
+        description: Temporary directory path used during download
+    required: [threads, tmpdir]
+
+  reference:
+    type: object
+    description: Reference genome build configuration
+    properties:
+      genome:
+        type: string
+        description: Genome build name (e.g., GRCh38, GRCm39)
+      version:
+        type: string
+        description: Annotation version (e.g., 48)
+      tool:
+        type: string
+        description: Reference building tool (e.g., STAR, cellranger)
+      threads:
+        type: integer
+        minimum: 1
+        description: Threads used for reference index building
+    required: [genome, version, tool, threads]
+
+  alignment:
+    type: object
+    description: Alignment configuration
+    properties:
+      threads:
+        type: integer
+        minimum: 1
+        description: Number of threads used for alignment
+      memory:
+        type: string
+        pattern: "^[0-9]+[GM]$"
+        description: Max RAM to use (e.g., 64G, 128G)
+      create_bam:
+        type: boolean
+        description: Whether to output BAM files
+      keep_unmapped:
+        type: boolean
+        description: Whether to keep unmapped reads
+    required: [threads, memory, create_bam, keep_unmapped]
+
+required:
+  - samples
+  - outdir
+  - download

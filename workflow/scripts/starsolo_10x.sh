@@ -43,8 +43,8 @@ while [[ $# -gt 0 ]]; do
     -t|--threads) THREADS="$2"; shift 2 ;;
     -m|--memory) MEMORY="$2"; shift 2 ;;
     -o|--outdir) OUTDIR="$2"; shift 2 ;;
-    -b|--bam) GENERATE_BAM=true; shift 2 ;;
-    -u|--unmapped) OUTPUT_UNMAPPED=true; shift 2 ;;
+    -b|--bam) GENERATE_BAM=true; shift 1 ;;
+    -u|--unmapped) OUTPUT_UNMAPPED=true; shift 1 ;;
     -h|--help) usage ;;
     *) echo "Unknown option: $1"; usage ;;
   esac
@@ -82,7 +82,6 @@ mkdir -p "$ALIGNDIR"
 log() { echo "[$(date +'%F %T')] $*" >&2; }
 
 # Choose one of the two otions, depending on whether you need a BAM file 
-# BAM="--outReadsUnmapped Fastx --outSAMtype BAM SortedByCoordinate --limitBAMsortRAM $MEMORY_IN_BYTES --outSAMunmapped Within --outMultimapperOrder Random --runRNGseed 1 --outSAMattributes NH HI AS nM CB UB CR CY UR UY GX GN"
 BAM_OPTS="--outSAMtype None"
 
 if [[ "$GENERATE_BAM" == true ]]; then

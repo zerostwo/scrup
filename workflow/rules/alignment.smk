@@ -10,8 +10,8 @@ rule align_starsolo:
         sample = lambda wc: wc.sample,
         outdir = lambda wc: f"{OUTDIR}/alignments",
         memory = ALIGN_MEMORY,
-        create_bam = ALIGN_CREATE_BAM,
-        keep_unmapped = ALIGN_KEEP_UNMAPPED,
+        create_bam = "--bam" if ALIGN_CREATE_BAM else "",
+        keep_unmapped = "--unmapped" if ALIGN_KEEP_UNMAPPED else "",
     threads: ALIGN_THREADS
     conda: "../envs/alignment.yaml"
     log:
@@ -20,7 +20,7 @@ rule align_starsolo:
     benchmark: f"{OUTDIR}/benchmarks/align_starsolo/{{sample}}.benchmark.log"
     shell:
         """
-        bash scripts/starsolo_10x.sh \
+        bash ../scripts/starsolo_10x.sh \
             --sample {params.sample} \
             --read1 {input.read1} \
             --read2 {input.read2} \
@@ -29,7 +29,7 @@ rule align_starsolo:
             --threads {threads} \
             --memory {params.memory} \
             --outdir {params.outdir} \
-            {{"--bam" if params.create_bam else ""}} \
-            {{"--unmapped" if params.keep_unmapped else ""}} \
+            {params.create_bam} \
+            {params.keep_unmapped} \
             > {log.stdout} 2> {log.stderr}
         """
