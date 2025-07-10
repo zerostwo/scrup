@@ -10,6 +10,8 @@ WHITELISTS=""
 THREADS=8
 MEMORY="32G"
 OUTDIR="./alignments"
+GENERATE_BAM=false
+OUTPUT_UNMAPPED=false
 
 # ---------------------- Help Message ----------------------
 usage() {
@@ -24,6 +26,8 @@ usage() {
   echo "  -t, --threads      Number of threads (default: 12)"
   echo "  -m, --memory       Max RAM, e.g., 64G (default: 64G)"
   echo "  -o, --outdir       Output directory (default: ./alignments)"
+  echo "  -b, --bam          Generate BAM file (default: false)"
+  echo "  -u, --unmapped     Output unmapped reads (default: false)"
   echo "  -h, --help         Show this help message"
   exit 1
 }
@@ -39,6 +43,8 @@ while [[ $# -gt 0 ]]; do
     -t|--threads) THREADS="$2"; shift 2 ;;
     -m|--memory) MEMORY="$2"; shift 2 ;;
     -o|--outdir) OUTDIR="$2"; shift 2 ;;
+    -b|--bam) GENERATE_BAM=true; shift 2 ;;
+    -u|--unmapped) OUTPUT_UNMAPPED=true; shift 2 ;;
     -h|--help) usage ;;
     *) echo "Unknown option: $1"; usage ;;
   esac
@@ -76,7 +82,23 @@ mkdir -p "$ALIGNDIR"
 log() { echo "[$(date +'%F %T')] $*" >&2; }
 
 # Choose one of the two otions, depending on whether you need a BAM file 
-BAM="--outReadsUnmapped Fastx --outSAMtype BAM SortedByCoordinate --limitBAMsortRAM $MEMORY_IN_BYTES --outSAMunmapped Within --outMultimapperOrder Random --runRNGseed 1 --outSAMattributes NH HI AS nM CB UB CR CY UR UY GX GN"
+# BAM="--outReadsUnmapped Fastx --outSAMtype BAM SortedByCoordinate --limitBAMsortRAM $MEMORY_IN_BYTES --outSAMunmapped Within --outMultimapperOrder Random --runRNGseed 1 --outSAMattributes NH HI AS nM CB UB CR CY UR UY GX GN"
+BAM_OPTS="--outSAMtype None"
+
+if [[ "$GENERATE_BAM" == true ]]; then
+  BAM_OPTS="--outSAMtype BAM SortedByCoordinate"
+  BAM_OPTS+=" --limitBAMsortRAM $MEMORY_IN_BYTES"
+  BAM_OPTS+=" --outSAMattributes NH HI AS nM CB UB CR CY UR UY GX GN"
+  
+  if [[ "$OUTPUT_UNMAPPED" == true ]]; then
+    BAM_OPTS+=" --outSAMunmapped Within"
+  fi
+fi
+
+UNMAPPED_OPTS=""
+if [[ "$OUTPUT_UNMAPPED" == true ]]; then
+  UNMAPPED_OPTS="--outReadsUnmapped Fastx"
+fi
 
 # Define some key variables, in order to evaluate reads for being:
 # 1) gzipped/bzipped/un-archived; 
@@ -222,7 +244,9 @@ log "Inferring strand-specificity..."
 STRAND=Forward
 
 mkdir -p ${ALIGNDIR}/test_forward/
-$STAR --runThreadN $THREADS --genomeDir $REFERENCE \
+$STAR --runThreadN $THREADS \
+  --genomeDir $REFERENCE \
+  --genomeLoad LoadAndKeep \
   --readFilesIn ${ALIGNDIR}/test.R2.fastq ${ALIGNDIR}/test.R1.fastq \
   --runDirPerm All_RWX --outSAMtype None \
   --soloType CB_UMI_Simple --soloCBwhitelist $BC \
@@ -240,7 +264,9 @@ $STAR --runThreadN $THREADS --genomeDir $REFERENCE \
   --soloOutFileNames test_forward/ features.tsv barcodes.tsv matrix.mtx &> /dev/null 
 
 mkdir -p ${ALIGNDIR}/test_reverse/
-$STAR --runThreadN $THREADS --genomeDir $REFERENCE \
+$STAR --runThreadN $THREADS \
+  --genomeDir $REFERENCE \
+  --genomeLoad LoadAndKeep \
   --readFilesIn ${ALIGNDIR}/test.R2.fastq ${ALIGNDIR}/test.R1.fastq \
   --runDirPerm All_RWX --outSAMtype None \
   --soloType CB_UMI_Simple --soloCBwhitelist $BC \
@@ -302,9 +328,11 @@ then
   $STAR \
     --runThreadN $THREADS \
     --genomeDir $REFERENCE \
+    --genomeLoad LoadAndRemove \
     --readFilesIn $READ1 $READ2 \
     --runDirPerm All_RWX $GZIP \
-    $BAM \
+    $BAM_OPTS \
+    $UNMAPPED_OPTS \
     --soloBarcodeMate 1 \
     --clip5pNbases 39 0 \
     --soloType CB_UMI_Simple \
@@ -328,10 +356,12 @@ else
   $STAR \
     --runThreadN $THREADS \
     --genomeDir $REFERENCE \
+    --genomeLoad LoadAndRemove \
     --readFilesIn $READ2 $READ1 \
     --runDirPerm All_RWX \
     $GZIP \
-    $BAM \
+    $BAM_OPTS \
+    $UNMAPPED_OPTS \
     --soloType CB_UMI_Simple \
     --soloCBwhitelist $BC \
     --soloBarcodeReadLength 0 \
@@ -389,7 +419,6 @@ if [[ -d ${ALIGNDIR}/outs ]]; then
   wait
   log "Compression complete."
 fi
-
 
 wait
 log "STARsolo completed for $SAMPLE"

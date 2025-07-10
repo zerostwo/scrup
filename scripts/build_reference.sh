@@ -146,6 +146,7 @@ if [[ "$TOOL_NAME" == "STAR" ]]; then
   "$TOOL" \
     --runThreadN "$THREADS" \
     --runMode genomeGenerate \
+    --outTmpDir "$BUILD/_STARtmp" \
     --genomeDir "$BUILD" \
     --genomeFastaFiles "$FASTA_IN" \
     --sjdbGTFfile "$GTF_FILTER"

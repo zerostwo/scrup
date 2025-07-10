@@ -10,8 +10,9 @@ rule sra2fastq:
     resources:
         download_slots=1
     log:
-        stdout=f"{OUTDIR}/logs/sra2fastq/{{sample}}.log",
-        stderr=f"{OUTDIR}/logs/sra2fastq/{{sample}}.err"
+        stdout=f"{OUTDIR}/logs/sra2fastq/{{sample}}.stdout.log",
+        stderr=f"{OUTDIR}/logs/sra2fastq/{{sample}}.stderr.log"
+    benchmark: f"{OUTDIR}/benchmarks/sra2fastq/{{sample}}.benchmark.log"
     shell:
         """
         bash scripts/sra2fastq.sh \
@@ -20,5 +21,6 @@ rule sra2fastq:
             --outdir {params.outdir} \
             --tmpdir {DOWNLOAD_TMPDIR} \
             --rename \
+            --no-check-success \
             > {log.stdout} 2> {log.stderr}
         """

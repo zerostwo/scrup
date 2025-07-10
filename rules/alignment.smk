@@ -4,17 +4,20 @@ rule align_starsolo:
         read2 = lambda wc: f"{OUTDIR}/fastqs/{wc.sample}_R2.fastq.gz",
         reference = f"{OUTDIR}/reference/{GENOME}/v{VERSION}/{TOOL}",
     output:
-        bam = f"{OUTDIR}/alignments/{{sample}}/Aligned.sortedByCoord.out.bam"
+        summary = f"{OUTDIR}/alignments/{{sample}}/outs/GeneFull/Summary.csv"
     params:
         whitelist = "resources/whitelists",
         sample = lambda wc: wc.sample,
         outdir = lambda wc: f"{OUTDIR}/alignments",
-        memory = ALIGN_MEMORY
+        memory = ALIGN_MEMORY,
+        create_bam = ALIGN_CREATE_BAM,
+        keep_unmapped = ALIGN_KEEP_UNMAPPED,
     threads: ALIGN_THREADS
     conda: "../envs/alignment.yaml"
     log:
-        out = f"{OUTDIR}/logs/align_starsolo/{{sample}}.out.log",
-        err = f"{OUTDIR}/logs/align_starsolo/{{sample}}.err.log"
+        stdout = f"{OUTDIR}/logs/align_starsolo/{{sample}}.stdout.log",
+        stderr = f"{OUTDIR}/logs/align_starsolo/{{sample}}.stderr.log"
+    benchmark: f"{OUTDIR}/benchmarks/align_starsolo/{{sample}}.benchmark.log"
     shell:
         """
         bash scripts/starsolo_10x.sh \
@@ -26,5 +29,7 @@ rule align_starsolo:
             --threads {threads} \
             --memory {params.memory} \
             --outdir {params.outdir} \
-            > {log.out} 2> {log.err}
+            {{"--bam" if params.create_bam else ""}} \
+            {{"--unmapped" if params.keep_unmapped else ""}} \
+            > {log.stdout} 2> {log.stderr}
         """

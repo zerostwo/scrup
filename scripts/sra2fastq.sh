@@ -8,6 +8,7 @@ TMPROOT=""
 USER_SET_TMPDIR=false
 INPUT=""
 RENAME=false
+CHECK_SUCCESS=true
 
 usage() {
   echo "Usage: $0 -i <ACCESSION | FILE> [-t THREADS] [-o OUTDIR] [-d TMPDIR]"
@@ -19,6 +20,7 @@ usage() {
   echo "  --prefetch          Prefetch command (default: prefetch)"
   echo "  --fasterq-dump      Fasterq-dump command (default: fasterq-dump)"
   echo "  --pigz              Pigz command (default: pigz)"
+  echo "  --no-check-success  Do not check success.log (default: false)"
   echo "  --help              Show this help message"
   exit 1
 }
@@ -34,6 +36,7 @@ while [[ $# -gt 0 ]]; do
     --prefetch) PREFETCH="$2"; shift 2 ;;
     --fasterq-dump) FASTERQ_DUMP="$2"; shift 2 ;;
     --pigz) PIGZ="$2"; shift 2 ;;
+    --no-check-success) CHECK_SUCCESS=false; shift ;;
     --help) usage ;;
     *) echo "Unknown option: $1"; usage ;;
   esac
@@ -45,10 +48,10 @@ done
 mkdir -p "$OUTDIR"
 SUCCESS_LOG="$OUTDIR/success.log"
 FAIL_LOG="$OUTDIR/fail.log"
-if [[ ! -f "$SUCCESS_LOG" ]]; then
+if [[ ! -f "$SUCCESS_LOG" && "$CHECK_SUCCESS" == true ]]; then
   : > "$SUCCESS_LOG"
 fi
-if [[ ! -f "$FAIL_LOG" ]]; then
+if [[ ! -f "$FAIL_LOG" && "$CHECK_SUCCESS" == true ]]; then
   : > "$FAIL_LOG"
 fi
 
@@ -279,7 +282,7 @@ process_accession_with_status() {
   local acc="$1"
   local tmp_success=true
 
-  if grep -qxF "$acc" "$SUCCESS_LOG"; then
+  if [[ "$CHECK_SUCCESS" == true && -f "$SUCCESS_LOG" && $(grep -xF "$acc" "$SUCCESS_LOG" 2>/dev/null) ]]; then
     log "[$acc] Already completed."
   else
     if process_accession "$acc"; then
@@ -290,12 +293,10 @@ process_accession_with_status() {
     fi
   fi
 
-  # Only rename if process_accession was successful
   if [[ "$tmp_success" == true && "$RENAME" == true ]]; then
     rename_by_role "$acc"
   fi
 }
-
 
 # ---------------------- Main Loop ----------------------
 if [[ -f "$INPUT" ]]; then

@@ -9,8 +9,9 @@ rule build_reference:
     threads: REF_THREADS
     conda: "../envs/alignment.yaml"
     log:
-        out = f"{OUTDIR}/logs/build_reference/{GENOME}_v{VERSION}_{TOOL}.out.log",
-        err = f"{OUTDIR}/logs/build_reference/{GENOME}_v{VERSION}_{TOOL}.err.log"
+        stdout = f"{OUTDIR}/logs/build_reference/{GENOME}_v{VERSION}_{TOOL}.stdout.log",
+        stderr = f"{OUTDIR}/logs/build_reference/{GENOME}_v{VERSION}_{TOOL}.stderr.log"
+    benchmark: f"{OUTDIR}/benchmarks/build_reference/{GENOME}_v{VERSION}_{TOOL}.benchmark.log"
     shell:
         """
         bash scripts/build_reference.sh \
@@ -20,5 +21,5 @@ rule build_reference:
             --outdir {output} \
             --filter \
             --threads {threads} \
-            > {log.out} 2> {log.err}
+            > {log.stdout} 2> {log.stderr}
         """

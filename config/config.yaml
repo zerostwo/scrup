@@ -15,3 +15,5 @@ reference:
 alignment:
   threads: 8           # Number of threads to use for STAR or cellranger alignment
   memory: "64G"        # Memory to use for STAR or cellranger alignment
+  create_bam: true
+  keep_unmapped: true
