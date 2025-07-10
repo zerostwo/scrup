@@ -12,6 +12,9 @@ rule align_starsolo:
         memory = ALIGN_MEMORY
     threads: ALIGN_THREADS
     conda: "../envs/alignment.yaml"
+    log:
+        out = f"{OUTDIR}/logs/align_starsolo/{{sample}}.out.log",
+        err = f"{OUTDIR}/logs/align_starsolo/{{sample}}.err.log"
     shell:
         """
         bash scripts/starsolo_10x.sh \
@@ -22,5 +25,6 @@ rule align_starsolo:
             --whitelists {params.whitelist} \
             --threads {threads} \
             --memory {params.memory} \
-            --outdir {params.outdir}
+            --outdir {params.outdir} \
+            > {log.out} 2> {log.err}
         """

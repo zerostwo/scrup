@@ -2,3 +2,6 @@ results/
 .DS_Store
 .snakemake/
 _STARtmp/
+.Rproj.user
+metadata/
+.Rhistory

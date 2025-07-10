@@ -93,6 +93,11 @@ process_one_srr() {
   local run=$1
   local tmp
 
+  if [[ -f "$OUTDIR/${run}.done" ]]; then
+    log "[$run] Already done — skipping"
+    return 0
+  fi
+
   if [[ "$USER_SET_TMPDIR" == true ]]; then
     tmp="${TMPROOT}/${run}"
   else
@@ -119,28 +124,40 @@ process_one_srr() {
 
   mv "$tmp"/*.fastq.gz "$OUTDIR/" || true
   rm -rf "$tmp"
+  touch "$OUTDIR/${run}.done"   # <-- DONE FLAG
   log "[$run] DONE"
 }
 
 merge_by_srx() {
   local srx="$1"
   local runs=($(resolve_to_srr "$srx"))
-  [[ "${#runs[@]}" -eq 0 ]] && return
+  local done_runs=()
 
-  if [[ "${#runs[@]}" -eq 1 ]]; then
-    local r="${runs[0]}"
+  for r in "${runs[@]}"; do
+    if [[ -f "$OUTDIR/${r}.done" ]]; then
+      done_runs+=("$r")
+    else
+      log "[$srx] Skipping $r: not yet done"
+    fi
+  done
+
+  [[ "${#done_runs[@]}" -eq 0 ]] && return
+
+  if [[ "${#done_runs[@]}" -eq 1 ]]; then
+    local r="${done_runs[0]}"
     for f in "$OUTDIR/${r}"_*.fastq.gz; do
       [[ -f "$f" ]] || continue
       mv "$f" "${f/${r}/${srx}}"
     done
   else
-    log "[$srx] Merging ${#runs[@]} runs"
-    local suffixes=$(ls "$OUTDIR/${runs[0]}"_*.fastq.gz | sed -E 's/.*_([0-9]+)\.fastq\.gz/\1/' | sort -u)
+    log "[$srx] Merging ${#done_runs[@]} runs"
+    local suffixes=$(ls "$OUTDIR/${done_runs[0]}"_*.fastq.gz | sed -E 's/.*_([0-9]+)\.fastq\.gz/\1/' | sort -u)
     for s in $suffixes; do
-      cat $(for r in "${runs[@]}"; do echo "$OUTDIR/${r}_${s}.fastq.gz"; done) > "$OUTDIR/${srx}_${s}.fastq.gz"
+      cat $(for r in "${done_runs[@]}"; do echo "$OUTDIR/${r}_${s}.fastq.gz"; done) > "$OUTDIR/${srx}_${s}.fastq.gz"
     done
-    for r in "${runs[@]}"; do
+    for r in "${done_runs[@]}"; do
       rm -f "$OUTDIR/${r}"_*.fastq.gz
+      rm -f "$OUTDIR/${r}.done"  # cleanup flag after merge
     done
   fi
   log "[$srx] Merge complete"
@@ -260,6 +277,7 @@ process_accession() {
 
 process_accession_with_status() {
   local acc="$1"
+  local tmp_success=true
 
   if grep -qxF "$acc" "$SUCCESS_LOG"; then
     log "[$acc] Already completed."
@@ -268,10 +286,12 @@ process_accession_with_status() {
       echo "$acc" >> "$SUCCESS_LOG"
     else
       echo "$acc" >> "$FAIL_LOG"
+      tmp_success=false
     fi
   fi
 
-  if [[ "$RENAME" == true ]]; then
+  # Only rename if process_accession was successful
+  if [[ "$tmp_success" == true && "$RENAME" == true ]]; then
     rename_by_role "$acc"
   fi
 }

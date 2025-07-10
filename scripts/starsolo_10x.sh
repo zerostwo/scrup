@@ -221,6 +221,7 @@ fi
 log "Inferring strand-specificity..."
 STRAND=Forward
 
+mkdir -p ${ALIGNDIR}/test_forward/
 $STAR --runThreadN $THREADS --genomeDir $REFERENCE \
   --readFilesIn ${ALIGNDIR}/test.R2.fastq ${ALIGNDIR}/test.R1.fastq \
   --runDirPerm All_RWX --outSAMtype None \
@@ -234,10 +235,11 @@ $STAR --runThreadN $THREADS --genomeDir $REFERENCE \
   --soloCellFilter EmptyDrops_CR --clipAdapterType CellRanger4 \
   --outFilterScoreMin 30 \
   --soloFeatures Gene GeneFull \
-  --outTmpDir ${ALIGNDIR}/_STARtmp \
+  --outTmpDir ${ALIGNDIR}/test_forward/_STARtmp \
   --outFileNamePrefix ${ALIGNDIR}/ \
   --soloOutFileNames test_forward/ features.tsv barcodes.tsv matrix.mtx &> /dev/null 
 
+mkdir -p ${ALIGNDIR}/test_reverse/
 $STAR --runThreadN $THREADS --genomeDir $REFERENCE \
   --readFilesIn ${ALIGNDIR}/test.R2.fastq ${ALIGNDIR}/test.R1.fastq \
   --runDirPerm All_RWX --outSAMtype None \
@@ -251,7 +253,7 @@ $STAR --runThreadN $THREADS --genomeDir $REFERENCE \
   --soloCellFilter EmptyDrops_CR --clipAdapterType CellRanger4 \
   --outFilterScoreMin 30 \
   --soloFeatures Gene GeneFull \
-  --outTmpDir ${ALIGNDIR}/_STARtmp \
+  --outTmpDir ${ALIGNDIR}/test_reverse/_STARtmp \
   --outFileNamePrefix ${ALIGNDIR}/ \
   --soloOutFileNames test_reverse/ features.tsv barcodes.tsv matrix.mtx &> /dev/null
 
